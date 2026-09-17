@@ -8,7 +8,7 @@ AI conversations often collapse into “do lots of tasks quickly” versus “do
 
 Change the workload, team capacity, and workflow assumptions. Compare manual expert work, vibe coding, mass generation, thoughtful assistance, and engineered automation using the same underlying equations. These are editable starting points, not fixed rankings.
 
-[![Watch the Workflow Economics walkthrough](docs/screenshots/outcomes.png)](https://maxim-mazurok.github.io/workflow-economics/video/workflow-economics-demo.mp4)
+[![Watch the Workflow Economics walkthrough](docs/screenshots/outcomes-video.png)](https://maxim-mazurok.github.io/workflow-economics/video/workflow-economics-demo.mp4)
 
 *Click the dashboard preview to play the full walkthrough. The web-optimized MP4 is hosted with the project’s GitHub Release and served through GitHub Pages; it is kept out of Git history.*
 
