@@ -2,13 +2,15 @@
 
 **An interactive lab for thinking about AI workflows in shades of grey.**
 
-[Open the live dashboard](https://maxim-mazurok.github.io/workflow-economics/) · [Explore the model](model.js)
+[Open the live dashboard](https://maxim-mazurok.github.io/workflow-economics/) · [Watch the 23-minute walkthrough](https://maxim-mazurok.github.io/workflow-economics/video/workflow-economics-demo.mp4) · [Read the LinkedIn post](https://lnkd.in/p/gxN9Jw56) · [Explore the model](model.js)
 
 AI conversations often collapse into “do lots of tasks quickly” versus “do the work well.” This dashboard explores the space between those positions: speed, cost, quality, human attention, and the investment needed to make automation useful over time.
 
 Change the workload, team capacity, and workflow assumptions. Compare manual expert work, vibe coding, mass generation, thoughtful assistance, and engineered automation using the same underlying equations. These are editable starting points, not fixed rankings.
 
-![The workflow trade-off dashboard, showing cost, useful throughput, quality, and a selected workflow](docs/screenshots/outcomes.png)
+[![Watch the Workflow Economics walkthrough](docs/screenshots/outcomes.png)](https://maxim-mazurok.github.io/workflow-economics/video/workflow-economics-demo.mp4)
+
+*Click the dashboard preview to play the full walkthrough. The web-optimized MP4 is hosted with the project’s GitHub Release and served through GitHub Pages; it is kept out of Git history.*
 
 ## Explore
 

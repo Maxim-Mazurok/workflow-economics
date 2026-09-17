@@ -29,6 +29,15 @@ jobs:
           node model.test.js
       - name: Build static site
         run: node scripts/build.mjs
+      - name: Add latest walkthrough video
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dist/video
+          if gh release view --json tagName >/dev/null 2>&1; then
+            gh release download --pattern 'workflow-economics-demo.mp4' --dir dist/video
+          fi
       - name: Upload Pages artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
