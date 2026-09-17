@@ -124,7 +124,7 @@
     strategies.forEach(s=>{
       const b=document.createElement('button');b.setAttribute('aria-pressed',String(visible.has(s.id)));b.title='Show or hide '+s.name;
       b.innerHTML=`<span class="dot" style="background:${s.color}"></span>${s.name}`;
-      b.onclick=()=>{if(visible.has(s.id)){if(visible.size>1)visible.delete(s.id);}else visible.add(s.id);legend();renderOutcomes();};$('legend').appendChild(b);
+      b.onclick=()=>{if(visible.has(s.id)){if(visible.size>1)visible.delete(s.id);}else visible.add(s.id);playbackBounds=null;legend();renderOutcomes();};$('legend').appendChild(b);
     });
   }
   function selectWorkflow(id){focus=id;$('focus').value=id;buildControls('strategy-controls',controlSpecs.strategy,true);updateControlSummaries();surfaceData=null;if(tab==='outcomes')renderOutcomes();else if(tab==='surface')renderSurface();}
@@ -132,15 +132,25 @@
     updateTimeReadout();
     renderSpace();renderDetails();renderLines();renderAccounting();renderTable();
   }
+  function paddedRange(values,fallback=[0,1],ceiling=Infinity){
+    const finite=values.filter(Number.isFinite);
+    if(!finite.length)return fallback;
+    const min=finite.reduce((a,b)=>Math.min(a,b),Infinity),max=finite.reduce((a,b)=>Math.max(a,b),-Infinity);
+    const pad=Math.max(max-min,Math.abs(max)*.1,.1)*.08;
+    return [Math.max(0,min-pad),Math.min(ceiling,max+pad)];
+  }
   function getPlaybackBounds(){
     if(playbackBounds)return playbackBounds;
-    let maxCost=1,maxThroughput=1;
-    for(const run of runs){
-      for(const row of run.rows)if(row.good>=1){maxCost=Math.max(maxCost,row.costPerGood);maxThroughput=Math.max(maxThroughput,row.throughput);}
+    const rows=[];
+    for(const run of runs.filter(r=>visible.has(r.strategy.id))){
+      rows.push(...run.rows.filter(row=>row.good>=1));
       const i=run.rows.findIndex(r=>r.good>=1);
-      if(i>0){const a=run.rows[i-1],b=run.rows[i],t=a.t+(1-a.good)*(b.t-a.t)/(b.good-a.good);const r=M.sample(run.rows,t);maxCost=Math.max(maxCost,r.costPerGood||0);}
+      if(i>0){const a=run.rows[i-1],b=run.rows[i],t=a.t+(1-a.good)*(b.t-a.t)/(b.good-a.good);rows.push(M.sample(run.rows,t));}
     }
-    return playbackBounds={linearX:[0,maxCost*1.06],logX:[0,Math.log10(1+maxCost)*1.06],y:[0,maxThroughput*1.08]};
+    const cost=rows.map(r=>r.costPerGood),speed=rows.map(r=>r.throughput),quality=rows.map(r=>r.quality*100);
+    if(visible.size<strategies.length)return playbackBounds={linearX:paddedRange(cost),logX:paddedRange(cost.map(c=>Math.log10(1+c))),y:paddedRange(speed),z:paddedRange(quality,[0,100],100)};
+    const maxCost=Math.max(1,...cost),maxThroughput=Math.max(1,...speed);
+    return playbackBounds={linearX:[0,maxCost*1.06],logX:[0,Math.log10(1+maxCost)*1.06],y:[0,maxThroughput*1.08],z:[0,100]};
   }
   function logCostTicks(range){
     const values=Array.from({length:6},(_,i)=>range[0]+(range[1]-range[0])*i/5);
@@ -216,8 +226,9 @@
       fixedX={...fixedX,range,autorange:false,...logCostTicks(range)};
     }
     const fixedY=bounds?{range:bounds.y,autorange:false}:{};
+    const qualityRange=bounds?bounds.z:visible.size<strategies.length?paddedRange(traces.flatMap(t=>t.z||[]),[0,100],100):[0,100];
     const costTitle=costLog?'Cost / useful ($, log scale)':'Cost / useful ($)';
-    const extra=space==='3d'?{margin:{l:0,r:0,b:0,t:0},scene:{xaxis:{...ax3(costTitle),...fixedX},yaxis:{...ax3('Useful / week'),...fixedY},zaxis:{...ax3('Quality (%)'),range:[0,100],autorange:false},camera:structuredClone(cameraState),uirevision:'workflow-camera',dragmode:'orbit',aspectmode:'manual',aspectratio:{x:1.1,y:1,z:.78},bgcolor:colors.paper},uirevision:'tradeoff-3d'}:{xaxis:{...axis(costTitle),rangemode:'tozero',autorange:true,...fixedX},yaxis:{...axis('Useful results per week · average'),rangemode:'tozero',autorange:true,...fixedY},margin:{l:60,r:20,t:35,b:52},uirevision:'tradeoff-2d'};
+    const extra=space==='3d'?{margin:{l:0,r:0,b:0,t:0},scene:{xaxis:{...ax3(costTitle),...fixedX},yaxis:{...ax3('Useful / week'),...fixedY},zaxis:{...ax3('Quality (%)'),range:qualityRange,autorange:false},camera:structuredClone(cameraState),uirevision:'workflow-camera',dragmode:'orbit',aspectmode:'manual',aspectratio:{x:1.1,y:1,z:.78},bgcolor:colors.paper},uirevision:'tradeoff-3d-'+[...visible].sort().join(',')}:{xaxis:{...axis(costTitle),rangemode:'tozero',autorange:true,...fixedX},yaxis:{...axis('Useful results per week · average'),rangemode:'tozero',autorange:true,...fixedY},margin:{l:60,r:20,t:35,b:52},uirevision:'tradeoff-2d-'+[...visible].sort().join(',')};
     extra.annotations=noResults?spaceAnnotation():[];
     spaceRendering++;
     const plotted=chart('tradeoff',traces,extra).finally(()=>{spaceRendering--;bindSpaceInteraction();});
@@ -283,9 +294,9 @@
     const percentage=['quality','firstPass','k'].includes(key),scale=percentage?100:key==='delta'?.001:1;
     const traces=runs.filter(run=>visible.has(run.strategy.id)&&(key!=='k'||run.strategy.ai)).map(run=>({type:'scatter',mode:'lines',name:run.strategy.name,x:run.rows.map(r=>r.t),y:run.rows.map(r=>r[key]===null?null:r[key]*scale),connectgaps:false,line:{color:run.strategy.color,width:run.strategy.id===focus?2.8:1.8,dash:run.strategy.id==='manual'?'dot':'solid'},hovertemplate:`<b>${run.strategy.name}</b><br>Week %{x:.2f}<br>%{y:,.2f}${percentage?'%':''}<extra></extra>`}));
     const yaxis={...axis(opts.title||metricLabels[key][0]),rangemode:'tozero'};
-    if(percentage)yaxis.range=[0,101];
+    if(percentage){if(visible.size===strategies.length)yaxis.range=[0,101];else{yaxis.range=paddedRange(traces.flatMap(t=>t.y),[0,100],100);yaxis.autorange=false;}}
     if(id==='effort'&&key!=='human'&&$('effortLog').checked){yaxis.type='log';yaxis.title.text+=' · log scale';yaxis.dtick='D2';}
-    chart(id,traces,{xaxis:{...axis('Weeks since start'),range:[0,p.horizon]},yaxis,shapes:[{type:'line',xref:'x',yref:'paper',x0:cursor,x1:cursor,y0:0,y1:1,line:{color:'#a8b5a4',width:1,dash:'dot'}}],hovermode:'x unified',hoverlabel:{font:{size:10},bgcolor:colors.paper},uirevision:revision+'-'+key});
+    chart(id,traces,{xaxis:{...axis('Weeks since start'),range:[0,p.horizon]},yaxis,shapes:[{type:'line',xref:'x',yref:'paper',x0:cursor,x1:cursor,y0:0,y1:1,line:{color:'#a8b5a4',width:1,dash:'dot'}}],hovermode:'x unified',hoverlabel:{font:{size:10},bgcolor:colors.paper},uirevision:revision+'-'+key+'-'+[...visible].sort().join(',')});
   }
   function renderLines(){
     const effort=$('effortMode').value;
