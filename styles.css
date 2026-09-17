@@ -22,3 +22,7 @@
 .capacity-summary{border-top:1px solid var(--line);padding-top:11px;margin-bottom:20px;font-variant-numeric:tabular-nums}.workflow-role{font-size:11px;line-height:1.65;color:var(--green);margin:13px 0}.workflow-customization{margin:18px 0}.workflow-customization summary{font-size:12px;font-weight:600;cursor:pointer}.uncertainty-controls{flex-wrap:wrap;justify-content:flex-end}.uncertainty-controls input{display:block;width:112px;margin-top:4px;padding:7px 6px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--ink);font-size:11px;font-variant-numeric:tabular-nums}.uncertainty-controls button{align-self:flex-end}.timebar .text-button{font-size:10px;margin-left:auto}
 @media(max-width:900px){.timebar{grid-template-columns:108px minmax(0,1fr) 61px;column-gap:12px}.timebar .time-readout,.timebar .time-readout strong{width:108px}.timebar>#horizon-label{width:61px}}
 @media(max-width:640px){.timebar{grid-template-columns:95px minmax(0,1fr) 55px;column-gap:8px}.timebar .time-readout,.timebar .time-readout strong{width:95px}.timebar>#horizon-label{width:55px}.timebar .playback-controls{gap:9px}.playback-controls button{padding:4px 7px}.playback-controls .check-label{margin-left:0}.uncertainty-controls{justify-content:flex-start}.timebar .text-button{margin-left:0}}
+
+/* Plotly 3D redraws conflict with camera gestures. Pause to interact. */
+#tradeoff.playback-locked,#tradeoff.playback-locked *{pointer-events:none!important}
+#tradeoff.playback-locked .modebar{display:none!important}

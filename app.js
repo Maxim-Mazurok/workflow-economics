@@ -168,26 +168,28 @@
     });
     return traces;
   }
-  function rememberCamera(){
-    const camera=$('tradeoff').layout?.scene?.camera;
-    if(camera)cameraState=structuredClone(camera);
+  function updateSpaceInteraction(){
+    const locked=playing&&space==='3d';
+    $('tradeoff').classList.toggle('playback-locked',locked);
+    document.querySelector('.plot-key .muted').textContent=space==='3d'?(locked?'Pause playback to rotate or inspect':'Drag to rotate · hover for details'):'Hover for values · click to inspect';
+    $('playback-note').textContent='Playback view: fixed axes, '+(costLog?'logarithmic':'linear')+' cost spacing, and markers that fade in after 1 expected useful result. '+(locked?'3D interaction is disabled while playing; pause to rotate or inspect.':'Hover shows actual dollars.');
   }
   function bindSpaceInteraction(){
     const graph=$('tradeoff');
     if(graph._workflowInteractionBound)return;
     graph._workflowInteractionBound=true;
-    graph.on('plotly_relayout',event=>{if(Object.keys(event).some(k=>k.startsWith('scene.camera')))rememberCamera();});
-    graph.addEventListener('pointerdown',event=>{if(!event.target.closest('.modebar'))spaceInteracting=true;},true);
+    graph.on('plotly_relayout',event=>{if(event['scene.camera'])cameraState=structuredClone(event['scene.camera']);});
+    graph.addEventListener('pointerdown',event=>{if(!playing&&!event.target.closest('.modebar'))spaceInteracting=true;},true);
     const finish=()=>{
       if(!spaceInteracting)return;
-      spaceInteracting=false;rememberCamera();
-      if(tab==='outcomes')queueCursorRender();
+      spaceInteracting=false;
+      // A paused camera gesture changes no model data. Do not redraw on release:
+      // Plotly commits its camera after pointerup, and an eager restyle resets it.
     };
     window.addEventListener('pointerup',finish);window.addEventListener('pointercancel',finish);window.addEventListener('blur',finish);
   }
   function updateSpaceFrame(){
-    // Keep Plotly's camera/drag controller untouched during playback. Pointer gestures
-    // own the scene until release; time and all other charts continue advancing.
+    // Playback locks 3D interaction. Paused gestures complete before data redraws.
     if(spaceInteracting||spaceRendering)return Promise.resolve();
     if(!animationView)return renderSpace();
     const graph=$('tradeoff'),traces=spaceTraces();
@@ -220,9 +222,9 @@
     spaceRendering++;
     const plotted=chart('tradeoff',traces,extra).finally(()=>{spaceRendering--;bindSpaceInteraction();});
     $('plot-key-right').textContent=space==='3d'?'Higher throughput & quality are better':'Marker size = released quality';
-    document.querySelector('.plot-key .muted').textContent=space==='3d'?'Drag to rotate · hover for details':'Hover for values · click to inspect';
+    updateSpaceInteraction();
     $('playback-note').hidden=!animationView;$('fitCurrent').hidden=!animationView;
-    $('playback-note').textContent='Playback view: fixed axes, '+(costLog?'logarithmic':'linear')+' cost spacing, and markers that fade in after 1 expected useful result. Drag to rotate while time advances. Hover shows actual dollars.';
+
     $('tradeoff').removeAllListeners?.('plotly_click');
     $('tradeoff').on('plotly_click',e=>{const id=e.points?.[0]?.data?.meta;if(id)selectWorkflow(id);});
     return plotted;
@@ -232,7 +234,7 @@
     $('time').setAttribute('aria-valuetext','Week '+cursor.toFixed(2));
   }
   function pauseTimeline(){
-    playing=false;cancelAnimationFrame(animationId);previousFrame=0;
+    playing=false;cancelAnimationFrame(animationId);previousFrame=0;updateSpaceInteraction();
     $('timePlay').textContent='▶ Play';$('timePlay').setAttribute('aria-label','Play timeline');$('timePlay').setAttribute('aria-pressed','false');
   }
   function queueCursorRender(){
@@ -253,7 +255,7 @@
   function playTimeline(){
     if(playing){pauseTimeline();return;}
     if(cursor>=p.horizon-1e-9)cursor=0;
-    animationView=true;playing=true;previousFrame=0;previousDraw=0;
+    animationView=true;playing=true;spaceInteracting=false;previousFrame=0;previousDraw=0;updateSpaceInteraction();
     $('timePlay').textContent='Ⅱ Pause';$('timePlay').setAttribute('aria-label','Pause timeline');$('timePlay').setAttribute('aria-pressed','true');
     function frame(now){
       if(!playing)return;

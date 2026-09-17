@@ -12,7 +12,7 @@ Change the workload, team capacity, and workflow assumptions. Compare manual exp
 
 ## Explore
 
-- **Outcomes over time:** rotate the 3D trade-off chart, switch to 2D, toggle log cost, and inspect trajectories. Play, pause, loop, scrub, or change playback speed. The camera remains usable during playback.
+- **Outcomes over time:** rotate the 3D trade-off chart, switch to 2D, toggle log cost, and inspect trajectories. Play, pause, loop, scrub, or change playback speed. 3D interaction is disabled during playback; pause to rotate or inspect the chart.
 - **Investment landscape:** vary setup and review effort to see the resulting surface. Automatically run 160 seeded, paired sensitivity scenarios; reuse the seed to reproduce a comparison.
 - **Model & evidence:** inspect equations, change structural coefficients, read sources, and review the model’s limitations.
 - **Save your work:** export results as CSV or save and reload assumptions, including the sensitivity seed.
