@@ -6,7 +6,7 @@
   let runs=[],cursor=p.horizon,tab='outcomes',space=innerWidth<640?'2d':'3d',surfaceView='3d',surfaceData=null,uncertaintyData=null,revision=0;
   let playing=false,animationView=false,animationId=0,previousFrame=0,previousDraw=0;
   let cursorFrame=0,cursorBusy=false,cursorDirty=false,playbackBounds=null;
-  let costLog=true,spaceInteracting=false,spaceRendering=0;
+  let costLog=true,spaceInteracting=false,spaceRendering=0,fitSpace=false;
   let cameraState={eye:{x:1.55,y:1.55,z:1.05},center:{x:0,y:0,z:0},up:{x:0,y:0,z:1}};
   const newSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
   let simulationSeed=newSeed(),uncertaintyKey='',uncertaintyTimer=0;
@@ -206,14 +206,14 @@
   function spaceAnnotation(){return [{text:animationView?'Waiting for the first expected useful result.<br>Setup and costs are already counted.':'No useful work delivered yet.<br>Per-result metrics are undefined.',xref:'paper',yref:'paper',x:.5,y:.5,showarrow:false,font:{size:12,color:colors.muted}}];}
   function renderSpace(){
     if(spaceInteracting)return Promise.resolve();
-    const traces=spaceTraces(),bounds=animationView?getPlaybackBounds():null,threshold=animationView?1:1e-10;
+    const traces=spaceTraces(),bounds=(animationView||(space==='2d'&&!fitSpace))?getPlaybackBounds():null,threshold=animationView?1:1e-10;
     const noResults=!runs.some(r=>visible.has(r.strategy.id)&&at(r).good>=threshold);
     const ax3=title=>({...axis(title),autorange:true,showbackground:false,gridcolor:colors.grid,zerolinecolor:colors.grid,title:{text:title,font:{size:11,color:colors.muted}},showspikes:false});
     let fixedX=bounds?{range:costLog?bounds.logX:bounds.linearX,autorange:false}:{};
     if(costLog){
       const values=traces.flatMap(t=>t.x),min=values.length?Math.min(...values):0,max=values.length?Math.max(...values):1;
       const span=Math.max(.1,max-min),range=bounds?bounds.logX:[Math.max(0,min-span*.1),max+span*.1];
-      fixedX={...fixedX,...logCostTicks(range)};
+      fixedX={...fixedX,range,autorange:false,...logCostTicks(range)};
     }
     const fixedY=bounds?{range:bounds.y,autorange:false}:{};
     const costTitle=costLog?'Cost / useful ($, log scale)':'Cost / useful ($)';
@@ -223,7 +223,7 @@
     const plotted=chart('tradeoff',traces,extra).finally(()=>{spaceRendering--;bindSpaceInteraction();});
     $('plot-key-right').textContent=space==='3d'?'Higher throughput & quality are better':'Marker size = released quality';
     updateSpaceInteraction();
-    $('playback-note').hidden=!animationView;$('fitCurrent').hidden=!animationView;
+    $('playback-note').hidden=!animationView;$('fitCurrent').hidden=!animationView&&!(space==='2d'&&!fitSpace);
 
     $('tradeoff').removeAllListeners?.('plotly_click');
     $('tradeoff').on('plotly_click',e=>{const id=e.points?.[0]?.data?.meta;if(id)selectWorkflow(id);});
@@ -255,7 +255,7 @@
   function playTimeline(){
     if(playing){pauseTimeline();return;}
     if(cursor>=p.horizon-1e-9)cursor=0;
-    animationView=true;playing=true;spaceInteracting=false;previousFrame=0;previousDraw=0;updateSpaceInteraction();
+    animationView=true;fitSpace=false;playing=true;spaceInteracting=false;previousFrame=0;previousDraw=0;updateSpaceInteraction();
     $('timePlay').textContent='Ⅱ Pause';$('timePlay').setAttribute('aria-label','Pause timeline');$('timePlay').setAttribute('aria-pressed','true');
     function frame(now){
       if(!playing)return;
@@ -368,13 +368,13 @@
   $('focus').innerHTML=strategies.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');$('focus').value=focus;
   $('scenario').onchange=()=>setScenario($('scenario').value);
   $('focus').onchange=()=>selectWorkflow($('focus').value);
-  $('reset').onclick=()=>{animationView=false;focus='engineered';strategies=M.presets.map(s=>({...s}));$('focus').value=focus;visible=new Set(M.presets.map(s=>s.id));$('scenario').value='evolving';setScenario('evolving');};
+  $('reset').onclick=()=>{animationView=false;fitSpace=false;focus='engineered';strategies=M.presets.map(s=>({...s}));$('focus').value=focus;visible=new Set(M.presets.map(s=>s.id));$('scenario').value='evolving';setScenario('evolving');};
   $('restore-workflow').onclick=()=>{Object.assign(selected(),M.presets.find(s=>s.id===focus));buildControls('strategy-controls',controlSpecs.strategy,true);recalculate();};
   $('time').oninput=()=>{pauseTimeline();cursor=Number($('time').value);queueCursorRender();};
   $('timeStart').onclick=()=>{pauseTimeline();moveCursor(0);};
   $('timeEnd').onclick=()=>{pauseTimeline();moveCursor(p.horizon);};
   $('timePlay').onclick=playTimeline;
-  $('fitCurrent').onclick=()=>{pauseTimeline();animationView=false;renderSpace();};
+  $('fitCurrent').onclick=()=>{pauseTimeline();animationView=false;fitSpace=true;renderSpace();};
   document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseTimeline();});
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
   $('showPaths').onchange=renderSpace;
